@@ -1,0 +1,11 @@
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+cmake_minimum_required(VERSION 3.10)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+project(6502-emu)
+include_directories(inc)
+FILE(GLOB SOURCE "src/*.cpp")
+ADD_EXECUTABLE(6502-emu ${SOURCE})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "bin")
