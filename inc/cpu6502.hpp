@@ -4,7 +4,7 @@
 #include <array>
 #include <cstdint>
 
-#define MAX_MEM 16*1024
+#define MAX_MEM 64*1024
 
 typedef uint8_t u8;
 typedef uint16_t u16;
