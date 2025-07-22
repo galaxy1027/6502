@@ -4,3 +4,6 @@ CMakeFiles/
 Makefile
 cmake_install.cmake
 compile_commands.json
+.vscode/
+6502-emu
+
