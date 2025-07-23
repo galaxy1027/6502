@@ -7,9 +7,12 @@ int main(int argc, char **argv)
     std::cout << "Initialized...\n";
     std::cout << "Program loaded!\n";
 
-    u8 opcode = cpu->Fetch();
-    std::cout << "Opcode: 0x" << std::hex << (unsigned int)opcode << "\n";
-    cpu->Execute(opcode);
+    bool running = true;
+
+    while (running)
+    {
+        cpu->Clock();
+    }
 
     delete cpu;
     return 0;

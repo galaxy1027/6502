@@ -27,6 +27,25 @@ void cpu6502::Reset()
     SP = 0xFF;
 }
 
+void cpu6502::Clock()
+{
+    if (cycles == 0)
+    {
+        u8 opcode = Fetch();
+        std::cout << std::hex << (unsigned int)opcode << "\n"; // TODO: delete line
+        Execute(opcode);
+    }
+    cycles--;
+}
+
+u8 cpu6502::Fetch()
+{
+    u8 data = ram[PC];
+    PC++;
+    cycles--;
+    return data;
+}
+
 void cpu6502::Execute(u8 opcode)
 {
     switch (opcode)
@@ -44,7 +63,7 @@ void cpu6502::Execute(u8 opcode)
         ram[0x0100 + SP--] = (returnAddr >> 8) & 0x00FF;
 
         PC = jumpAddr;
-        cycles -= 6;
+        cycles += 6;
     }
     break;
     case 0xA5: // LDA_ZP
@@ -52,14 +71,14 @@ void cpu6502::Execute(u8 opcode)
         u8 zeroPageAddr = Fetch();
         u8 data = ram[zeroPageAddr];
         LDA(data);
-        cycles -= 3;
+        cycles += 3;
     }
     break;
     case 0xA9: // LDA_IM
     {
         u8 data = Fetch();
         LDA(data);
-        cycles -= 2;
+        cycles += 2;
     }
     break;
     case 0xB5: // LDA_ZPX
@@ -67,23 +86,16 @@ void cpu6502::Execute(u8 opcode)
         u8 zeroPageAddr = Fetch() + X;
         u8 data = ram[zeroPageAddr];
         LDA(data);
-        cycles -= 4;
+        cycles += 4;
     }
     break;
     default:
     {
         std::cerr << "ERROR: Unrecognized opcode\n";
+        std::exit(EXIT_FAILURE);
     }
     break;
     }
-}
-
-u8 cpu6502::Fetch()
-{
-    u8 data = ram[PC];
-    PC++;
-    cycles--;
-    return data;
 }
 
 void cpu6502::LDA(u8 data)

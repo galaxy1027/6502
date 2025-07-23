@@ -40,8 +40,9 @@ private:
 public:
     cpu6502();
     void Reset();
-    void Execute(u8 opcode);
+    void Clock();
     u8 Fetch();
+    void Execute(u8 opcode);
 };
 
 #endif
