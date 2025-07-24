@@ -1,19 +1,30 @@
-#include "cpu6502.hpp"
-#include "iostream"
+#include <iostream>
+#include <string>
+
+#include "nes.hpp"
 
 int main(int argc, char **argv)
 {
-    cpu6502 *cpu = new cpu6502();
-    std::cout << "Initialized...\n";
-    std::cout << "Program loaded!\n";
 
-    bool running = true;
-
-    while (running)
+    if (argc != 2)
     {
-        cpu->Clock();
+        std::cerr << "Provide a path to a valid ROM file.\n";
+        return 1;
     }
 
-    delete cpu;
+    /* Initialize NES object */
+    nes *nesEmu = new nes();
+    std::cout << "Initialized...\n";
+
+    /* Load rom */
+    std::string romPath = std::string(argv[1]);
+    if (nesEmu->LoadRom(romPath) == 0)
+        std::cout << "Program loaded!\n";
+
+    /* Run emulator */
+
+    /* Cleanup */
+    delete nesEmu;
+
     return 0;
 }
