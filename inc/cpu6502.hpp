@@ -26,18 +26,19 @@ class cpu6502
     u16 PC;            // Program Counter
 
     /* Status flags */
-    u8 C : 1 = 0; // Carry
-    u8 Z : 1 = 0; // Zero
-    u8 I : 1 = 0; // Interrupt disable
-    u8 D : 1 = 0; // Decimal mode
-    u8 B : 1 = 0; // Break
-    u8 V : 1 = 0; // Overflow
-    u8 N : 1 = 0; // Negative
+    bool C; // Carry
+    bool Z; // Zero
+    bool I; // Interrupt disable
+    bool D; // Decimal mode
+    bool B; // Break
+    bool V; // Overflow
+    bool N; // Negative
 
     u8 opcode;
     u32 cycles; // Number of cycles left for the CPU to complete on current instruciton
 
     /* Memory */
+  public:
     std::array<u8, MAX_MEM> ram;
 
     /* Private opcode functions */

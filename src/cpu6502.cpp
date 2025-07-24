@@ -5,7 +5,7 @@
 cpu6502::cpu6502()
 {
     ram = std::array<u8, MAX_MEM>();
-    Init();
+    ram.fill(0);
 }
 
 /*
@@ -17,8 +17,7 @@ cpu6502::cpu6502()
 */
 void cpu6502::Init()
 {
-    ram.fill(0);
-    PC = 0xFFFC;
+    PC = ram[0xFFFC] | (ram[0xFFFD] << 8);
     SP = 0xFF;
 }
 
@@ -37,7 +36,6 @@ u8 cpu6502::Fetch()
 {
     u8 data = ram[PC];
     PC++;
-    cycles--;
     return data;
 }
 

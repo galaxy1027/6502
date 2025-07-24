@@ -18,10 +18,11 @@ int main(int argc, char **argv)
 
     /* Load rom */
     std::string romPath = std::string(argv[1]);
-    if (nesEmu->LoadRom(romPath) == 0)
-        std::cout << "Program loaded!\n";
 
     /* Run emulator */
+    nesEmu->Startup(romPath);
+
+    nesEmu->Run();
 
     /* Cleanup */
     delete nesEmu;
