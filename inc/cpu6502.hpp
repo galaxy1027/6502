@@ -9,6 +9,9 @@
 typedef uint8_t u8;
 typedef uint16_t u16;
 typedef uint32_t u32;
+typedef int8_t i8;
+typedef int16_t i16;
+typedef int32_t i32;
 
 class cpu6502
 {
@@ -46,6 +49,16 @@ class cpu6502
     void LD(u8 data, enum reg r);
     void LSR(u8 *dataAddr);
     void STR(u16 addr, enum reg r);
+    void INC(enum reg r);
+    void DEC(enum reg r);
+    void AND(u8 data);
+
+    /* Utility functions */
+    void PushStack(u8 data);
+    void PushStackWord(u16 data);
+    void PushStackFlags();
+    u8 PopStack();
+    u16 PopStackWord();
 
   public:
     cpu6502();
@@ -53,6 +66,7 @@ class cpu6502
     void Clock();
     u8 Fetch();
     u16 FetchWord();
+    u8 Read(u16 addr);
     void Execute(u8 opcode);
     void StoreByte(u8 val, u16 addr);
 };
