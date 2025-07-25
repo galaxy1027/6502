@@ -66,12 +66,12 @@ void cpu6502::StoreByte(u8 val, u16 addr)
 
 void cpu6502::Execute(u8 opcode)
 {
-    std::cout << std::hex << (unsigned int)opcode << "\n"; // TODO: delete line
+    std::cout << "0x" << std::hex << PC << ":\t" << std::hex << (unsigned int)opcode << "\n"; // TODO: delete line
     switch (opcode)
     {
     case 0x00: // BRK
     {
-        PushStack(PC);
+        PushStackWord(PC + 1);
         PushStackFlags();
         B = 1;
         PC = (ram[0xFFFE]) | (ram[0xFFFF] << 8); // Load the IRQ vector into the PC
@@ -81,17 +81,22 @@ void cpu6502::Execute(u8 opcode)
 
     case 0x10: // BPL
     {
-        i8 relativeOffset = Fetch();
+        i8 displacement = Fetch();
         if (N == 0)
         {
-            std::cout << "branch offset = " << (int)relativeOffset << std::endl;
             u16 oldPC = PC; // Save the old PC location for checking page crossing
-            PC += relativeOffset;
+            PC += displacement;
             cycles += 1;
 
             if ((oldPC & 0xFF00) != (PC & 0xFF00)) // Branched to different mem page
                 cycles += 1;
         }
+        cycles += 2;
+    }
+    break;
+    case 0x18: // CLC
+    {
+        C = 0;
         cycles += 2;
     }
     break;
@@ -104,9 +109,7 @@ void cpu6502::Execute(u8 opcode)
 
         // Push the 16 bit PC address onto the stack
         u16 returnAddr = PC - 1;
-        ram[0x0100 + SP--] = (returnAddr & 0x00FF);
-        ram[0x0100 + SP--] = (returnAddr >> 8) & 0x00FF;
-
+        PushStackWord(returnAddr);
         PC = jumpAddr;
         cycles += 6;
     }
@@ -118,9 +121,22 @@ void cpu6502::Execute(u8 opcode)
         cycles += 2;
     }
     break;
+    case 0x40: // RTI
+    {
+        PopStackFlags();
+        PC = PopStackWord();
+        cycles += 6;
+    }
+    break;
     case 0x48: // PHA
     {
         PushStack(A);
+        cycles += 3;
+    }
+    break;
+    case 0x4C: // JMP_ABS
+    {
+        PC = FetchWord();
         cycles += 3;
     }
     break;
@@ -132,10 +148,47 @@ void cpu6502::Execute(u8 opcode)
         cycles += 6;
     }
     break;
+    case 0x60: // RTS
+    {
+        PC = PopStackWord() + 1;
+        cycles += 6;
+    }
+    break;
+    case 0x69: // ADC_IM
+    {
+        u8 data = Fetch();
+        ADD(data);
+        cycles += 2;
+    }
+    break;
+    case 0x6C: // JMP_IND
+    {
+        u16 pointer = FetchWord();
+        u8 addrLSB = ram[pointer];
+
+        // 6502 original hardware bug: page fails to wrap if the lower byte is 0xFF
+        // For example, JMP $03FF reads 03FF + 0300 instead of 03FF + 0400
+        u8 addrMSB;
+        if ((pointer & 0x00FF) == 0xFF)
+            addrMSB = ram[pointer & 0xFF00];
+        else
+            addrMSB = ram[pointer + 1];
+
+        PC = addrLSB | (addrMSB << 8);
+        cycles += 5;
+    }
+    break;
     case 0x78: // SEI
     {
         I = 1;
         cycles += 2;
+    }
+    break;
+    case 0x84: // STY_ZP
+    {
+        u8 zeroPageAddr = Fetch();
+        STR(zeroPageAddr, REG_Y);
+        cycles += 3;
     }
     break;
     case 0x85: // STA_ZP
@@ -143,6 +196,32 @@ void cpu6502::Execute(u8 opcode)
         u8 zeroPageAddr = Fetch();
         STR(zeroPageAddr, REG_A);
         cycles += 3;
+    }
+    break;
+    case 0x86: // STX_ZP
+    {
+        u8 zeroPageAddr = Fetch();
+        STR(zeroPageAddr, REG_X);
+        cycles += 3;
+    }
+    break;
+    case 0x88: // DEY
+    {
+        DEC_REG(REG_Y);
+        cycles += 2;
+    }
+    break;
+    case 0x8A: // TXA
+    {
+        TransferReg(&X, &A);
+        cycles += 2;
+    }
+    break;
+    case 0x8C: // STY_ABS
+    {
+        u16 addr = FetchWord();
+        STR(addr, REG_Y);
+        cycles += 4;
     }
     break;
     case 0x8D: // STA_ABS
@@ -157,6 +236,27 @@ void cpu6502::Execute(u8 opcode)
         u16 addr = FetchWord();
         STR(addr, REG_X);
         cycles += 4;
+    }
+    break;
+    case 0x90: // BCC
+    {
+        i8 displacement = Fetch();
+        if (C == 0)
+        {
+            u16 oldPC = PC;
+            PC += displacement;
+            cycles += 1;
+
+            if ((oldPC & 0xFF00) != (PC & 0xFF00)) // Branched to different mem page
+                cycles += 1;
+        }
+        cycles += 2;
+    }
+    break;
+    case 0x98: // TYA
+    {
+        TransferReg(&Y, &A);
+        cycles += 2;
     }
     break;
     case 0x99: // STA_ABS_Y
@@ -177,6 +277,13 @@ void cpu6502::Execute(u8 opcode)
         u16 addr = FetchWord() + X;
         STR(addr, REG_A);
         cycles += 5;
+    }
+    break;
+    case 0xA0: // LDY_IM
+    {
+        u8 data = Fetch();
+        LD(data, REG_Y);
+        cycles += 2;
     }
     break;
     case 0xA2: // LDX_IM
@@ -233,9 +340,70 @@ void cpu6502::Execute(u8 opcode)
         cycles += 4;
     }
     break;
+    case 0xB9: // LDA_ABS_Y
+    {
+        u16 baseAddr = FetchWord();
+        u16 absAddr = baseAddr + Y;
+        u8 data = Read(absAddr);
+        LD(data, REG_A);
+
+        if ((baseAddr & 0xFF00) != (absAddr & 0xFF00)) // Check if page was crossed
+            cycles += 1;
+
+        cycles += 4;
+    }
+    break;
+    case 0xBD: // LDA_ABS_X
+    {
+        u16 baseAddr = FetchWord();
+        u16 absAddr = baseAddr + X;
+        u8 data = Read(absAddr);
+        LD(data, REG_A);
+
+        if ((baseAddr & 0xFF00) != (absAddr & 0xFF00)) // Check if page was crossed
+            cycles += 1;
+
+        cycles += 4;
+    }
+    break;
+    case 0xC0: // CPY_IM
+    {
+        u8 data = Fetch();
+        CMP(data, REG_Y);
+        cycles += 2;
+    }
+    break;
+    case 0xC6: // DEC_ZP
+    {
+        u16 addr = Fetch();
+        DEC_MEM(addr);
+        cycles += 5;
+    }
+    break;
+    case 0xC8: // INY
+    {
+        INC_REG(REG_Y);
+        cycles += 2;
+    }
+    break;
     case 0xCA: // DEX
     {
-        DEC(REG_X);
+        DEC_REG(REG_X);
+        cycles += 2;
+    }
+    break;
+    case 0xD0: // BNE
+    {
+        i8 displacement = Fetch();
+        if (Z == 0)
+        {
+            u16 oldPC = PC;
+            PC += displacement;
+            cycles += 1;
+
+            if ((oldPC & 0xFF00) != (PC & 0xFF00)) // Branched to different mem page
+                cycles += 1;
+        }
         cycles += 2;
     }
     break;
@@ -245,14 +413,43 @@ void cpu6502::Execute(u8 opcode)
         cycles += 2;
     }
     break;
+    case 0xE0: // CPX_IM
+    {
+        u8 data = Fetch();
+        CMP(data, REG_X);
+        cycles += 2;
+    }
+    break;
+    case 0xE6: // INC_ZP
+    {
+        u16 addr = Fetch();
+        INC_MEM(addr);
+        cycles += 5;
+    }
+    break;
     case 0xE8: // INX
     {
-        INC(REG_X);
+        INC_REG(REG_X);
         cycles += 2;
     }
     break;
     case 0xEA: // NOP
     {
+        cycles += 2;
+    }
+    break;
+    case 0xF0: // BEQ
+    {
+        i8 displacement = Fetch();
+        if (Z == 1)
+        {
+            u16 oldPC = PC;
+            PC += displacement;
+            cycles += 1;
+
+            if ((oldPC & 0xFF00) != (PC & 0xFF00)) // Branched to different mem page
+                cycles += 1;
+        }
         cycles += 2;
     }
     break;
@@ -264,39 +461,51 @@ void cpu6502::Execute(u8 opcode)
     }
 }
 
-void cpu6502::PushStackFlags()
+void cpu6502::PushStack(u8 data)
 {
-    u8 flags = (C << 0) | (Z << 1) | (I << 2) | (D << 3) | (B << 4) | (1 << 5) | (V << 6) | (N << 7);
-    ram[SP] = flags;
+    ram[0x0100 + SP] = data;
     SP--;
 }
 
-void cpu6502::PushStack(u8 data)
-{
-    ram[SP] = data;
-    SP--;
-}
 void cpu6502::PushStackWord(u16 data)
 {
     u8 dataMSB = (data >> 8) & 0x00FF;
     u8 dataLSB = (data) & 0x00FF;
-    PushStack(dataLSB);
     PushStack(dataMSB);
-    SP -= 2;
+    PushStack(dataLSB);
+}
+
+void cpu6502::PushStackFlags()
+{
+    u8 flags = (C << 0) | (Z << 1) | (I << 2) | (D << 3) | (B << 4) | (1 << 5) | (V << 6) | (N << 7);
+    PushStack(flags);
 }
 
 u8 cpu6502::PopStack()
 {
-    u8 data = ram[SP];
     SP++;
+    u8 data = ram[0x0100 + SP];
     return data;
 }
 
 u16 cpu6502::PopStackWord()
 {
-    u16 data = (ram[SP] << 8) | (ram[SP - 1]);
-    SP += 2;
+    u8 dataLSB = PopStack();
+    u8 dataMSB = PopStack();
+    u16 data = (dataMSB << 8) | (dataLSB);
     return data;
+}
+
+void cpu6502::PopStackFlags()
+{
+    u8 flags = PopStack();
+    C = (flags >> 0) & 0x1;
+    Z = (flags >> 1) & 0x1;
+    I = (flags >> 2) & 0x1;
+    D = (flags >> 3) & 0x1;
+    B = (flags >> 4) & 0x1;
+    V = (flags >> 6) & 0x1;
+    N = (flags >> 7) & 0x1;
 }
 
 void cpu6502::LD(u8 data, enum reg r)
@@ -333,7 +542,7 @@ void cpu6502::STR(u16 addr, enum reg r)
     ram[addr] = data;
 }
 
-void cpu6502::INC(enum reg r)
+void cpu6502::INC_REG(enum reg r)
 {
     u8 *reg;
     if (r == REG_A)
@@ -347,7 +556,14 @@ void cpu6502::INC(enum reg r)
     N = (*reg & 0b10000000) != 0;
 }
 
-void cpu6502::DEC(enum reg r)
+void cpu6502::INC_MEM(u16 addr)
+{
+    ram[addr]++;
+    Z = (ram[addr] == 0);
+    N = (ram[addr] & 0b10000000) != 0;
+}
+
+void cpu6502::DEC_REG(enum reg r)
 {
     u8 *reg;
     if (r == REG_A)
@@ -360,9 +576,55 @@ void cpu6502::DEC(enum reg r)
     Z = (*reg == 0);
     N = (*reg & 0b10000000) != 0;
 }
+
+void cpu6502::DEC_MEM(u16 addr)
+{
+    u8 result = ram[addr] - 1;
+    ram[addr] = result;
+    Z = (result == 0);
+    N = (result & 0b10000000) != 0;
+}
+
 void cpu6502::AND(u8 data)
 {
     A &= data;
+    Z = (A == 0);
+    N = (A & 0b10000000) != 0;
+}
+
+void cpu6502::CMP(u8 data, enum reg r)
+{
+    u8 regVal;
+    if (r == REG_A)
+        regVal = A;
+    else if (r == REG_X)
+        regVal = X;
+    else if (r == REG_Y)
+        regVal = Y;
+
+    u8 result = regVal - data;
+    C = (regVal >= data);
+    Z = (regVal == data);
+    N = (result & 0b10000000) != 0;
+}
+
+void cpu6502::TransferReg(u8 *src, u8 *dest)
+{
+    *dest = *src;
+
+    Z = (*dest == 0);
+    N = (*dest & 0b10000000) != 0;
+}
+
+void cpu6502::ADD(u8 data)
+{
+    u16 sum = A + data + C;
+
+    V = (~(A ^ data) & (A ^ sum) & 0x80) != 0;
+    C = (sum > 0xFF);
+
+    A = (sum & 0x00FF);
+
     Z = (A == 0);
     N = (A & 0b10000000) != 0;
 }

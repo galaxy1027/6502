@@ -49,16 +49,22 @@ class cpu6502
     void LD(u8 data, enum reg r);
     void LSR(u8 *dataAddr);
     void STR(u16 addr, enum reg r);
-    void INC(enum reg r);
-    void DEC(enum reg r);
+    void INC_REG(enum reg r);
+    void INC_MEM(u16 addr);
+    void DEC_REG(enum reg r);
+    void DEC_MEM(u16 addr);
     void AND(u8 data);
+    void CMP(u8 data, enum reg r);
+    void ADD(u8 data);
 
     /* Utility functions */
     void PushStack(u8 data);
     void PushStackWord(u16 data);
     void PushStackFlags();
+    void TransferReg(u8 *src, u8 *dest);
     u8 PopStack();
     u16 PopStackWord();
+    void PopStackFlags();
 
   public:
     cpu6502();
