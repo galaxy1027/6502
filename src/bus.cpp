@@ -3,47 +3,92 @@
 #include <iostream>
 #include <vector>
 
+#include "bus.hpp"
 #include "cpu6502.hpp"
-#include "nes.hpp"
+#include "ppu2C02.hpp"
 
-nes::nes()
+Bus::Bus()
 {
     cpu = new cpu6502();
+    ppu = new ppu2C02();
+    ram.fill(0);
+    cpu->ram = &(this->ram);
+
+    cpu->ConnectBus(this);
 }
 
-nes::~nes()
+Bus::~Bus()
 {
     delete cpu;
+    delete ppu;
+    delete cart;
 }
 
-void nes::Run()
+void Bus::Run()
 {
-    while (1)
+    while (running)
     {
+        Clock();
+    }
+}
+
+void Bus::Startup()
+{
+    cpu->Init();
+    running = true;
+    Run();
+}
+
+void Bus::Clock()
+{
+    ppu->Clock();
+
+    if (systemCycleCount % 3 == 0) // CPU Clock should be 3x slower than PPU
         cpu->Clock();
-    }
+
+    systemCycleCount++;
 }
 
-void nes::Startup(std::string romPath)
+u8 Bus::cpuRead(u16 addr)
 {
-    if (LoadRom(romPath) == 0)
-    {
-        std::cout << "Program loaded!\n";
-        cpu->Init();
-    }
-    else
-    {
-        std::cerr << "Failed to load rom, aborting";
-        exit(1);
-    }
+    u8 data = 0x00;
+
+    if (cart->cpuRead(addr, data))
+        ;
+
+    else if (addr >= 0x0000 && addr <= 0x1FFF)
+        data = cpuRam[addr & 0x07FF];
+
+    else if (addr >= 0x2000 && addr <= 0x3FFF)
+        data = ppu->cpuRead(addr & 0x0007);
+
+    return data;
 }
 
+void Bus::cpuWrite(u8 data, u16 addr)
+{
+    if (cart->cpuWrite(data, addr))
+    {
+    }
+    else if (addr > 0x0000 && addr <= 0x1FFF)
+        data = cpuRam[addr & 0x07FF];
+
+    else if (addr >= 0x2000 && addr <= 0x3FFF)
+        ppu->cpuWrite(addr & 0x0007, data);
+}
+
+void Bus::InsertCartridge(Cartridge *cart)
+{
+    this->cart = cart;
+    ppu->cart = cart;
+    cpu->cart = cart;
+}
 /*
  * Load NES Rom
  *
  * If the file does not exist, -1 is returned for error handling
  */
-int nes::LoadRom(std::string path)
+int Bus::LoadRom(std::string path)
 {
     int status = 0;
 
@@ -73,11 +118,11 @@ int nes::LoadRom(std::string path)
         std::vector<u8> prgRom(prgRomSize, 0);
         inputFile.seekg(romOffsetBytes);
         inputFile.read(reinterpret_cast<char *>(prgRom.data()), prgRomSize);
-        std::copy(prgRom.begin(), prgRom.end(), cpu->ram.begin() + 0x8000);
+        std::copy(prgRom.begin(), prgRom.end(), ram.begin() + 0x8000);
 
         if (prgRomSize == 16 * 1024)
             // Mirror 16K rom into 32K space
-            std::copy(prgRom.begin(), prgRom.end(), cpu->ram.begin() + 0xC000);
+            std::copy(prgRom.begin(), prgRom.end(), ram.begin() + 0xC000);
     }
     else
     {
@@ -94,7 +139,7 @@ int nes::LoadRom(std::string path)
  * Parse Header
  * Extract important information from a headered rom file, like PRG-ROM size
  */
-void nes::parseHeader(std::array<u8, 16> header)
+void Bus::parseHeader(std::array<u8, 16> header)
 {
     /* Extracting the PRG_ROM size */
     u8 prgRomSizeLSB = header[4];

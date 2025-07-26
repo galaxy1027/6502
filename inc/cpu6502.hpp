@@ -1,17 +1,15 @@
-#ifndef CPU_H
-#define CPU_H
+#ifndef CPU_HPP
+#define CPU_HPP
 
 #include <array>
 #include <cstdint>
 
-#define MAX_MEM 64 * 1024
+#include "cartridge.hpp"
+#include "types.h"
 
-typedef uint8_t u8;
-typedef uint16_t u16;
-typedef uint32_t u32;
-typedef int8_t i8;
-typedef int16_t i16;
-typedef int32_t i32;
+#define MAX_MEM (64 * 1024)
+
+class Bus;
 
 class cpu6502
 {
@@ -37,15 +35,18 @@ class cpu6502
     bool V; // Overflow
     bool N; // Negative
 
+    Bus *bus;
     u8 opcode;
-    u32 cycles; // Number of cycles left for the CPU to complete on current instruciton
+    u32 cycles;
 
     /* Memory */
   public:
-    std::array<u8, MAX_MEM> ram;
+    std::array<u8, MAX_MEM> *ram;
 
-    /* Private opcode functions */
+    Cartridge *cart;
+
   private:
+    /* Private opcode functions */
     void LD(u8 data, enum reg r);
     void LSR(u8 *dataAddr);
     void STR(u16 addr, enum reg r);
@@ -75,6 +76,7 @@ class cpu6502
     u8 Read(u16 addr);
     void Execute(u8 opcode);
     void StoreByte(u8 val, u16 addr);
+    void ConnectBus(Bus *b);
 };
 
 #endif

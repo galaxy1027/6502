@@ -1,7 +1,7 @@
 #include <iostream>
 #include <string>
 
-#include "nes.hpp"
+#include "bus.hpp"
 
 int main(int argc, char **argv)
 {
@@ -13,16 +13,15 @@ int main(int argc, char **argv)
     }
 
     /* Initialize NES object */
-    nes *nesEmu = new nes();
+    Bus *nesEmu = new Bus();
     std::cout << "Initialized...\n";
 
     /* Load rom */
-    std::string romPath = std::string(argv[1]);
+    Cartridge *cart = new Cartridge(std::string(argv[1]));
+    nesEmu->InsertCartridge(cart);
 
     /* Run emulator */
-    nesEmu->Startup(romPath);
-
-    nesEmu->Run();
+    nesEmu->Startup();
 
     /* Cleanup */
     delete nesEmu;

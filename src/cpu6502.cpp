@@ -1,11 +1,10 @@
 #include "cpu6502.hpp"
 
+#include "bus.hpp"
 #include <iostream>
 
 cpu6502::cpu6502()
 {
-    ram = std::array<u8, MAX_MEM>();
-    ram.fill(0);
 }
 
 /*
@@ -17,7 +16,7 @@ cpu6502::cpu6502()
 */
 void cpu6502::Init()
 {
-    PC = ram[0xFFFC] | (ram[0xFFFD] << 8);
+    PC = bus->cpuRead(0xFFFC) | (bus->cpuRead(0xFFFD) << 8);
     SP = 0xFF;
 }
 
@@ -33,23 +32,8 @@ void cpu6502::Clock()
 
 u8 cpu6502::Fetch()
 {
-    u8 data = ram[PC];
+    u8 data = bus->cpuRead(PC);
     PC++;
-    return data;
-}
-
-u8 cpu6502::Read(u16 addr)
-{
-    u8 data;
-    switch (addr)
-    {
-    case 0x2002:
-        data = 0x80;
-        break;
-    default:
-        data = ram[addr];
-        break;
-    }
     return data;
 }
 
@@ -61,9 +45,13 @@ u16 cpu6502::FetchWord()
 
 void cpu6502::StoreByte(u8 val, u16 addr)
 {
-    ram[addr] = val;
+    bus->cpuWrite(val, addr);
 }
 
+void cpu6502::ConnectBus(Bus *b)
+{
+    bus = b;
+}
 void cpu6502::Execute(u8 opcode)
 {
     std::cout << "0x" << std::hex << PC << ":\t" << std::hex << (unsigned int)opcode << "\n"; // TODO: delete line
@@ -74,7 +62,7 @@ void cpu6502::Execute(u8 opcode)
         PushStackWord(PC + 1);
         PushStackFlags();
         B = 1;
-        PC = (ram[0xFFFE]) | (ram[0xFFFF] << 8); // Load the IRQ vector into the PC
+        PC = (bus->cpuRead(0xFFFE)) | (bus->cpuRead(0xFFFF) << 8); // Load the IRQ vector into the PC
         cycles += 7;
     }
     break;
@@ -140,14 +128,6 @@ void cpu6502::Execute(u8 opcode)
         cycles += 3;
     }
     break;
-    case 0x4E: // LSR_ABS
-    {
-        u16 addr = FetchWord();
-        u8 *dataAddr = &ram[addr];
-        LSR(dataAddr);
-        cycles += 6;
-    }
-    break;
     case 0x60: // RTS
     {
         PC = PopStackWord() + 1;
@@ -164,15 +144,15 @@ void cpu6502::Execute(u8 opcode)
     case 0x6C: // JMP_IND
     {
         u16 pointer = FetchWord();
-        u8 addrLSB = ram[pointer];
+        u8 addrLSB = bus->cpuRead(pointer);
 
         // 6502 original hardware bug: page fails to wrap if the lower byte is 0xFF
         // For example, JMP $03FF reads 03FF + 0300 instead of 03FF + 0400
         u8 addrMSB;
         if ((pointer & 0x00FF) == 0xFF)
-            addrMSB = ram[pointer & 0xFF00];
+            addrMSB = bus->cpuRead(pointer & 0xFF00);
         else
-            addrMSB = ram[pointer + 1];
+            addrMSB = bus->cpuRead(pointer + 1);
 
         PC = addrLSB | (addrMSB << 8);
         cycles += 5;
@@ -296,7 +276,7 @@ void cpu6502::Execute(u8 opcode)
     case 0xA5: // LDA_ZP
     {
         u8 zeroPageAddr = Fetch();
-        u8 data = ram[zeroPageAddr];
+        u8 data = bus->cpuRead(zeroPageAddr);
         LD(data, REG_A);
         cycles += 3;
     }
@@ -327,7 +307,7 @@ void cpu6502::Execute(u8 opcode)
     case 0xAD: // LDA_ABS
     {
         u16 addr = Fetch() | (Fetch() << 8);
-        u8 data = Read(addr);
+        u8 data = bus->cpuRead(addr);
         LD(data, REG_A);
         cycles += 4;
     }
@@ -335,7 +315,7 @@ void cpu6502::Execute(u8 opcode)
     case 0xB5: // LDA_ZPX
     {
         u8 zeroPageAddr = Fetch() + X;
-        u8 data = ram[zeroPageAddr];
+        u8 data = bus->cpuRead(zeroPageAddr);
         LD(data, REG_A);
         cycles += 4;
     }
@@ -344,7 +324,7 @@ void cpu6502::Execute(u8 opcode)
     {
         u16 baseAddr = FetchWord();
         u16 absAddr = baseAddr + Y;
-        u8 data = Read(absAddr);
+        u8 data = bus->cpuRead(absAddr);
         LD(data, REG_A);
 
         if ((baseAddr & 0xFF00) != (absAddr & 0xFF00)) // Check if page was crossed
@@ -357,7 +337,7 @@ void cpu6502::Execute(u8 opcode)
     {
         u16 baseAddr = FetchWord();
         u16 absAddr = baseAddr + X;
-        u8 data = Read(absAddr);
+        u8 data = bus->cpuRead(absAddr);
         LD(data, REG_A);
 
         if ((baseAddr & 0xFF00) != (absAddr & 0xFF00)) // Check if page was crossed
@@ -463,7 +443,7 @@ void cpu6502::Execute(u8 opcode)
 
 void cpu6502::PushStack(u8 data)
 {
-    ram[0x0100 + SP] = data;
+    bus->cpuWrite(data, 0x0100 + SP);
     SP--;
 }
 
@@ -484,8 +464,7 @@ void cpu6502::PushStackFlags()
 u8 cpu6502::PopStack()
 {
     SP++;
-    u8 data = ram[0x0100 + SP];
-    return data;
+    return bus->cpuRead(0x0100 + SP);
 }
 
 u16 cpu6502::PopStackWord()
@@ -539,7 +518,7 @@ void cpu6502::STR(u16 addr, enum reg r)
     else if (r == REG_Y)
         data = Y;
 
-    ram[addr] = data;
+    bus->cpuWrite(data, addr);
 }
 
 void cpu6502::INC_REG(enum reg r)
@@ -558,9 +537,11 @@ void cpu6502::INC_REG(enum reg r)
 
 void cpu6502::INC_MEM(u16 addr)
 {
-    ram[addr]++;
-    Z = (ram[addr] == 0);
-    N = (ram[addr] & 0b10000000) != 0;
+    u8 data = bus->cpuRead(addr);
+    data++;
+    Z = (data == 0);
+    N = (data & 0b10000000) != 0;
+    bus->cpuWrite(data, addr);
 }
 
 void cpu6502::DEC_REG(enum reg r)
@@ -579,8 +560,8 @@ void cpu6502::DEC_REG(enum reg r)
 
 void cpu6502::DEC_MEM(u16 addr)
 {
-    u8 result = ram[addr] - 1;
-    ram[addr] = result;
+    u8 result = bus->cpuRead(addr) - 1;
+    bus->cpuWrite(result, addr);
     Z = (result == 0);
     N = (result & 0b10000000) != 0;
 }
