@@ -2,6 +2,7 @@
 #include <string>
 
 #include "bus.hpp"
+#include "renderer.hpp"
 
 int main(int argc, char **argv)
 {
@@ -16,6 +17,10 @@ int main(int argc, char **argv)
     Bus *nesEmu = new Bus();
     std::cout << "Initialized...\n";
 
+    /* Start SDL Renderer */
+    Renderer *gameRenderer = new Renderer(256, 240);
+    nesEmu->ConnectToScreen(gameRenderer);
+
     /* Load rom */
     Cartridge *cart = new Cartridge(std::string(argv[1]));
     nesEmu->InsertCartridge(cart);
@@ -25,6 +30,7 @@ int main(int argc, char **argv)
 
     /* Cleanup */
     delete nesEmu;
+    delete gameRenderer;
 
     return 0;
 }
