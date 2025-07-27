@@ -18,12 +18,14 @@ class Renderer
     ~Renderer();
 
     void RenderFrame(std::array<u32, 256 * 240> buffer);
+    void RenderTable(std::array<u32, 128 * 128> table);
     void Clear();
 
   private:
     SDL_Window *window;
     SDL_Renderer *sdlRenderer;
     SDL_Texture *texture;
+    SDL_Texture *patternTexture;
 
     int width;
     int height;

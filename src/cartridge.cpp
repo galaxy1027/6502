@@ -87,19 +87,20 @@ bool Cartridge::ppuRead(u16 addr, u8 &data)
     u32 mappedAddr = 0;
     bool status = false;
 
-    if (cartMapper->cpuMapRead(addr, mappedAddr))
+    if (cartMapper->ppuMapRead(addr, mappedAddr))
     {
         data = chrMemory[mappedAddr];
         status = true;
     }
     return status;
 }
+
 bool Cartridge::ppuWrite(u16 addr, u8 data)
 {
     u32 mappedAddr = 0;
     bool status = false;
 
-    if (cartMapper->cpuMapRead(addr, mappedAddr))
+    if (cartMapper->ppuMapRead(addr, mappedAddr))
     {
         chrMemory[mappedAddr] = data;
         status = true;

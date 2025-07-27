@@ -18,6 +18,7 @@ Renderer::Renderer(int width, int height)
 
     sdlRenderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
     texture = SDL_CreateTexture(sdlRenderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, width, height);
+    patternTexture = SDL_CreateTexture(sdlRenderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, 128, 128);
 }
 
 Renderer::~Renderer()
@@ -33,6 +34,14 @@ void Renderer::RenderFrame(std::array<u32, 256 * 240> buffer)
     SDL_UpdateTexture(texture, nullptr, buffer.data(), width * sizeof(u32));
     SDL_RenderClear(sdlRenderer);
     SDL_RenderCopy(sdlRenderer, texture, nullptr, nullptr);
+    SDL_RenderPresent(sdlRenderer);
+}
+
+void Renderer::RenderTable(std::array<u32, 128 * 128> table)
+{
+    SDL_UpdateTexture(patternTexture, nullptr, table.data(), 128 * sizeof(u32));
+    SDL_RenderClear(sdlRenderer);
+    SDL_RenderCopy(sdlRenderer, patternTexture, nullptr, nullptr);
     SDL_RenderPresent(sdlRenderer);
 }
 

@@ -1,6 +1,8 @@
 #ifndef PPU_HPP
 #define PPU_HPP
 
+#include <SDL2/SDL.h>
+
 #include <array>
 #include <cstdint>
 
@@ -12,11 +14,11 @@
 class ppu2C02
 {
   private:
-    /* Register addresses */
-  private:
     /* Memory map */
-    std::array<std::array<u8, 1024>, 2> nametables; // NES has 2x 1KB tables
+    // std::array<std::array<u8, 1024>, 2> patternTables; // NES has 2x 1KB tables
     std::array<u8, 32> palettes;
+
+    std::array<SDL_Surface *, 2> patternTable;
 
   public:
     Cartridge *cart;
@@ -34,6 +36,9 @@ class ppu2C02
     /* PPU bus */
     u8 ppuRead(u16 addr);
     void ppuWrite(u16 addr, u8 data);
+
+    /* Get a pattern table from CHR memory as an array of pixels */
+    std::array<u32, 128 * 128> GetPatternTable(u8 patternTable);
 };
 
 #endif

@@ -8,46 +8,6 @@ Bus::Bus()
     cpu->ConnectBus(this);
 
     renderFrame = true;
-
-    // TODO: Delete frame buffer test
-    for (int y = 0; y < SCREEN_HEIGHT; ++y)
-    {
-        for (int x = 0; x < SCREEN_WIDTH; ++x)
-        {
-            uint8_t bar = x / 32; // 8 vertical bars
-            uint32_t color;
-
-            switch (bar)
-            {
-            case 0:
-                color = 0xFFFF0000;
-                break; // Red
-            case 1:
-                color = 0xFFFF8000;
-                break; // Orange
-            case 2:
-                color = 0xFFFFFF00;
-                break; // Yellow
-            case 3:
-                color = 0xFF00FF00;
-                break; // Green
-            case 4:
-                color = 0xFF00FFFF;
-                break; // Cyan
-            case 5:
-                color = 0xFF0000FF;
-                break; // Blue
-            case 6:
-                color = 0xFF8000FF;
-                break; // Purple
-            case 7:
-                color = 0xFFFFFFFF;
-                break; // White
-            }
-
-            framebuffer[y * SCREEN_WIDTH + x] = color;
-        }
-    }
 }
 
 Bus::~Bus()
@@ -59,6 +19,8 @@ Bus::~Bus()
 
 void Bus::Run()
 {
+    auto patternTable = ppu->GetPatternTable(1);
+
     while (running)
     {
         SDL_PollEvent(&sdlEvent);
@@ -68,7 +30,7 @@ void Bus::Run()
         {
             Clock();
             if (renderFrame)
-                gameRenderer->RenderFrame(framebuffer);
+                gameRenderer->RenderTable(patternTable);
         }
     }
 }
