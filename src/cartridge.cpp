@@ -31,7 +31,7 @@ Cartridge::Cartridge(std::string path)
 
             /* Load character memory */
             chrBankCount = header.chrSizeMSB;
-            prgMemory.resize(chrBankCount * 8 * 1024);
+            chrMemory.resize(chrBankCount * 8 * 1024);
             inputFile.read((char *)chrMemory.data(), chrMemory.size());
         }
         if (inesFileType == 2)

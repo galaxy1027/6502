@@ -34,7 +34,7 @@ class Bus
 
     /* Graphics */
     Renderer *gameRenderer;
-    std::array<u32, SCREEN_HEIGHT * SCREEN_WIDTH> framebuffer;
+    std::array<u32, SCREEN_WIDTH * SCREEN_HEIGHT> framebuffer;
     SDL_Event sdlEvent;
 
     void Clock();

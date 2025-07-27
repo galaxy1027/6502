@@ -2,6 +2,9 @@
 
 Renderer::Renderer(int width, int height)
 {
+
+    this->width = width;
+    this->height = height;
     if (SDL_Init(SDL_INIT_VIDEO) != 0)
     {
         std::cerr << "SDL Failed to initialize!\n";
