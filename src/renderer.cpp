@@ -17,7 +17,7 @@ Renderer::Renderer(int width, int height)
                               width, height, SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE);
 
     sdlRenderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
-    texture = SDL_CreateTexture(sdlRenderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, width, height);
+    texture = SDL_CreateTexture(sdlRenderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, width, height);
 }
 
 Renderer::~Renderer()

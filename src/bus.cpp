@@ -14,34 +14,34 @@ Bus::Bus()
     {
         for (int x = 0; x < SCREEN_WIDTH; ++x)
         {
-            uint8_t bar = x / 32;        // 8 vertical bars
-            uint32_t color = 0xFF000000; // Alpha
+            uint8_t bar = x / 32; // 8 vertical bars
+            uint32_t color;
 
             switch (bar)
             {
             case 0:
-                color |= 0xFF0000;
+                color = 0xFFFF0000;
                 break; // Red
             case 1:
-                color |= 0xFF8000;
+                color = 0xFFFF8000;
                 break; // Orange
             case 2:
-                color |= 0xFFFF00;
+                color = 0xFFFFFF00;
                 break; // Yellow
             case 3:
-                color |= 0x00FF00;
+                color = 0xFF00FF00;
                 break; // Green
             case 4:
-                color |= 0x00FFFF;
+                color = 0xFF00FFFF;
                 break; // Cyan
             case 5:
-                color |= 0x0000FF;
+                color = 0xFF0000FF;
                 break; // Blue
             case 6:
-                color |= 0x8000FF;
+                color = 0xFF8000FF;
                 break; // Purple
             case 7:
-                color |= 0xFFFFFF;
+                color = 0xFFFFFFFF;
                 break; // White
             }
 

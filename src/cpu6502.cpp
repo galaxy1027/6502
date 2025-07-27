@@ -18,6 +18,7 @@ void cpu6502::Init()
 {
     PC = bus->cpuRead(0xFFFC) | (bus->cpuRead(0xFFFD) << 8);
     SP = 0xFF;
+    cycles = 0;
 }
 
 void cpu6502::Clock()
@@ -27,7 +28,10 @@ void cpu6502::Clock()
         u8 opcode = Fetch();
         Execute(opcode);
     }
-    cycles--;
+    else
+    {
+        cycles--;
+    }
 }
 
 u8 cpu6502::Fetch()
