@@ -18,7 +18,7 @@ class Renderer
     ~Renderer();
 
     void RenderFrame(std::array<u32, 256 * 240> buffer);
-    void RenderTable(std::array<u32, 128 * 128> table);
+    void RenderCombinedTable(SDL_Surface *table);
     void Clear();
 
   private:
@@ -26,6 +26,8 @@ class Renderer
     SDL_Renderer *sdlRenderer;
     SDL_Texture *texture;
     SDL_Texture *patternTexture;
+
+    uint8_t selectedPalette = 0x00;
 
     int width;
     int height;

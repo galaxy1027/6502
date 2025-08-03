@@ -18,7 +18,7 @@ int main(int argc, char **argv)
     std::cout << "Initialized...\n";
 
     /* Start SDL Renderer */
-    Renderer *gameRenderer = new Renderer(256, 240);
+    Renderer *gameRenderer = new Renderer(256, 128);
     nesEmu->ConnectToScreen(gameRenderer);
 
     /* Load rom */

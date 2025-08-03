@@ -18,7 +18,9 @@ Renderer::Renderer(int width, int height)
 
     sdlRenderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
     texture = SDL_CreateTexture(sdlRenderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, width, height);
-    patternTexture = SDL_CreateTexture(sdlRenderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, 128, 128);
+    patternTexture = SDL_CreateTexture(sdlRenderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, 256, 128);
+
+    SDL_RenderSetLogicalSize(sdlRenderer, 256, 128); // Match your surface size
 }
 
 Renderer::~Renderer()
@@ -37,14 +39,15 @@ void Renderer::RenderFrame(std::array<u32, 256 * 240> buffer)
     SDL_RenderPresent(sdlRenderer);
 }
 
-void Renderer::RenderTable(std::array<u32, 128 * 128> table)
+void Renderer::RenderCombinedTable(SDL_Surface *table)
 {
-    SDL_UpdateTexture(patternTexture, nullptr, table.data(), 128 * sizeof(u32));
+    SDL_Texture *texture = SDL_CreateTextureFromSurface(sdlRenderer, table);
     SDL_RenderClear(sdlRenderer);
-    SDL_RenderCopy(sdlRenderer, patternTexture, nullptr, nullptr);
+    SDL_Rect destRect = {0, 0, table->w, table->h};
+    SDL_RenderCopy(sdlRenderer, texture, nullptr, &destRect);
     SDL_RenderPresent(sdlRenderer);
+    SDL_DestroyTexture(texture);
 }
-
 void Renderer::Clear()
 {
     SDL_RenderClear(sdlRenderer);

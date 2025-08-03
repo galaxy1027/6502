@@ -35,7 +35,8 @@ class Bus
     /* Graphics */
     Renderer *gameRenderer;
     std::array<u32, SCREEN_WIDTH * SCREEN_HEIGHT> framebuffer;
-    SDL_Event sdlEvent;
+    SDL_Event event;
+    i8 palette = 0;
 
     void Clock();
 
@@ -44,6 +45,8 @@ class Bus
     ~Bus();
     void Run();
     void Startup();
+
+    void HandleEvent(SDL_Event event);
 
     u8 cpuRead(u16 addr);
     void cpuWrite(u8 data, u16 addr);

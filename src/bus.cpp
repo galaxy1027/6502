@@ -1,4 +1,6 @@
 #include "bus.hpp"
+#include <iomanip> // for setw, setfill, hex, etc.
+#include <iostream>
 
 Bus::Bus()
 {
@@ -19,18 +21,19 @@ Bus::~Bus()
 
 void Bus::Run()
 {
-    auto patternTable = ppu->GetPatternTable(1);
-
     while (running)
     {
-        SDL_PollEvent(&sdlEvent);
-        if (sdlEvent.type == SDL_QUIT)
-            running = false;
-        else
+        SDL_PollEvent(&event);
+
+        HandleEvent(event);
+
         {
             Clock();
             if (renderFrame)
-                gameRenderer->RenderTable(patternTable);
+            {
+                auto combinedPatternTables = ppu->GetCombinedPatternTables(palette);
+                gameRenderer->RenderCombinedTable(combinedPatternTables);
+            }
         }
     }
 }
@@ -42,12 +45,40 @@ void Bus::Startup()
     Run();
 }
 
+void Bus::HandleEvent(SDL_Event event)
+{
+    if (event.type == SDL_QUIT)
+    {
+        running = false;
+    }
+    else if (event.type == SDL_KEYDOWN)
+    {
+        switch (event.key.keysym.sym)
+        {
+        case SDLK_LEFT:
+            if (palette > 0)
+                palette -= 1;
+            break;
+        case SDLK_RIGHT:
+            if (palette < 4)
+                palette += 1;
+            break;
+        }
+    }
+}
+
 void Bus::Clock()
 {
     ppu->Clock();
 
     if (systemCycleCount % 3 == 0) // CPU Clock should be 3x slower than PPU
         cpu->Clock();
+
+    if (ppu->nmi)
+    {
+        ppu->nmi = false;
+        // cpu->nmi();
+    }
 
     systemCycleCount++;
 }
