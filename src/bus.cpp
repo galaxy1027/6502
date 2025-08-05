@@ -24,16 +24,13 @@ void Bus::Run()
     while (running)
     {
         SDL_PollEvent(&event);
-
         HandleEvent(event);
 
+        Clock();
+        if (renderFrame)
         {
-            Clock();
-            if (renderFrame)
-            {
-                auto combinedPatternTables = ppu->GetCombinedPatternTables(palette);
-                gameRenderer->RenderCombinedTable(combinedPatternTables);
-            }
+            auto combinedPatternTables = ppu->GetCombinedPatternTables(palette);
+            gameRenderer->RenderCombinedTable(combinedPatternTables);
         }
     }
 }

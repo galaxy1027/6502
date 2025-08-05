@@ -63,7 +63,7 @@ void cpu6502::Execute(u8 opcode)
     {
     case 0x00: // BRK
     {
-        PushStackWord(PC + 1);
+        PushStackWord(PC + 2);
         PushStackFlags();
         B = 1;
         PC = (bus->cpuRead(0xFFFE)) | (bus->cpuRead(0xFFFF) << 8); // Load the IRQ vector into the PC

@@ -4,27 +4,6 @@ ppu2C02::ppu2C02()
 {
     patternTableVisualize[0] = SDL_CreateRGBSurfaceWithFormat(0, 128, 128, 32, SDL_PIXELFORMAT_RGBA8888);
     patternTableVisualize[1] = SDL_CreateRGBSurfaceWithFormat(0, 128, 128, 32, SDL_PIXELFORMAT_RGBA8888);
-
-    nesColorPalette = {0xFF545454, 0xFF001E74, 0xFF081090, 0xFF300088, 0xFF440064, 0xFF5C0030, 0xFF540400, 0xFF3C1800,
-                       0xFF202A00, 0xFF083A00, 0xFF004000, 0xFF003C00, 0xFF00323C, 0xFF000000, 0xFF000000, 0xFF000000,
-                       0xFF989698, 0xFF084CC4, 0xFF3032EC, 0xFF5C1EE4, 0xFF8814B0, 0xFFA01464, 0xFF982220, 0xFF783C00,
-                       0xFF545A00, 0xFF287200, 0xFF087C00, 0xFF007628, 0xFF006678, 0xFF000000, 0xFF000000, 0xFF000000,
-                       0xFFECEEEC, 0xFF4C9AEC, 0xFF787CEC, 0xFFB062EC, 0xFFE454EC, 0xFFEC58B4, 0xFFEC6A64, 0xFFD48820,
-                       0xFFA0AA00, 0xFF74C400, 0xFF4CD020, 0xFF38CC6C, 0xFF38B4CC, 0xFF3C3C3C, 0xFF000000, 0xFF000000,
-                       0xFFECEEEC, 0xFFA8CCEC, 0xFFBCBCEC, 0xFFD4B2EC, 0xFFECAAE4, 0xFFECB4C4, 0xFFE4C0A0, 0xFFE0D084,
-                       0xFFCCE482, 0xFFAEEA8C, 0xFFB4F4BC, 0xFFB0F0D8, 0xFFB8E8E4, 0xFFB8B8B8, 0xFF000000, 0xFF000000};
-    paletteTable.fill(0x00);
-    // Set background palette #0 to black, dark gray, light gray, white
-    paletteTable[0x00] = 0x00; // color index 0 (still gray)
-    paletteTable[0x01] = 0x01; // color index 1 = dark blue
-    paletteTable[0x02] = 0x02; // color index 2 = light blue
-    paletteTable[0x03] = 0x03; // color index 3 = magenta
-
-    // Optional: background palette #1
-    paletteTable[0x04] = 0x10; // color index from later in palette
-    paletteTable[0x05] = 0x20;
-    paletteTable[0x06] = 0x30;
-    paletteTable[0x07] = 0x3F;
 }
 
 ppu2C02::~ppu2C02()
@@ -207,12 +186,11 @@ std::array<u32, 128 * 128> ppu2C02::GetPatternTable(u8 tableNum, u8 paletteNum)
 
             for (int col = 0; col < 8; col++)
             {
-                u8 pixel = (tileLSB & 0x01) + (tileMSB & 0x01);
-                tileLSB >>= 1;
-                tileMSB >>= 1;
+                u8 bit = 7 - col;
+                u8 pixel = ((tileLSB >> bit) & 0x01) | (((tileMSB >> bit) & 0x01) << 1);
 
-                u32 color = getColorFromPalette(paletteNum, pixel);
-                int x = tileX * 8 + (7 - col);
+                u32 color = GetColorFromPalette(paletteNum, pixel);
+                int x = tileX * 8 + col;
                 int y = tileY * 8 + row;
                 pixels[y * 128 + x] = color;
             }
@@ -221,9 +199,11 @@ std::array<u32, 128 * 128> ppu2C02::GetPatternTable(u8 tableNum, u8 paletteNum)
     return pixels;
 }
 
-u32 ppu2C02::getColorFromPalette(u8 palette, u8 pixel)
+u32 ppu2C02::GetColorFromPalette(u8 palette, u8 pixel)
 {
-    return nesColorPalette[ppuRead(0x3F00 + (palette * 4) + pixel) & 0x3F];
+    u16 paletteBase = 0x3F00 + (palette * 4);
+    u8 colorIndex = ppuRead(paletteBase + pixel) & 0x3F;
+    return nesColorPalette[colorIndex];
 }
 
 /* Debug */
